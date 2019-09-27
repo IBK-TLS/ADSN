@@ -71,12 +71,18 @@ def gini_impurity(data):
     prob  = np.array(prob)
     return np.sum(prob*(1-prob))
 
+class composition_tree():
+    def __init__(self):
+        self.data = []
+        self.classes = []
+        self.levels = []
+        
 
 def best_split(db, lb, index):
     gini = gini_impurity(lb)
     split = []
-    best_fit = []
-    best_nofit = []
+    branch_true = []
+    branch_false = []
     N = len(lb)
     gain_gini = 0
     for f1 in range(nlabels):
@@ -87,16 +93,16 @@ def best_split(db, lb, index):
             g_notfit = gini_impurity(notfit)
             g = ( g_fit * (len(fit)/N) + g_notfit * (len(notfit)/N) )
             gain = gini - g
-            print(gini, g, gain, [f1, f2])
+            #print(gini, g, gain, [f1, f2])
             if gain > gain_gini :
                 #gini = g
                 gain_gini = gain
                 split = [f1, f2]     
-                best_fit = fit
-                best_nofit = notfit
+                branch_true = [d for d in db if d[index] == f1 and d[index+1] == f2]
+                branch_false = [d for d in db if not d[index] == f1 or not d[index+1] == f2]
                 #print(gini, gain_gini, split)
                 
-    return split, gini, gain_gini
+    return branch_true, branch_false, split, gini, gain_gini
 
 
     
@@ -108,8 +114,10 @@ def main(args):
     c = list(zip(db, lb))
     random.shuffle(c)
     db, lb = zip(*c)
-    split, gini , gain= best_split(db, lb, 0)
+    branch_true, branch_false, split, gini , gain = best_split(db, lb, 0)
     print(split, gini, gain)
+    print(branch_true)
+    print(branch_false)
 
 
 if __name__ == '__main__':
