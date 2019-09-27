@@ -75,6 +75,8 @@ def gini_impurity(data):
 def best_split(db, lb, index):
     gini = gini_impurity(lb)
     split = []
+    best_fit = []
+    best_nofit = []
     N = len(lb)
     gain_gini = 0
     for f1 in range(nlabels):
@@ -90,12 +92,15 @@ def best_split(db, lb, index):
                 #gini = g
                 gain_gini = gain
                 split = [f1, f2]     
+                best_fit = fit
+                best_nofit = notfit
                 #print(gini, gain_gini, split)
                 
     return split, gini, gain_gini
-        
+
+
     
-# write a main
+### MAIN ###
 
 
 def main(args):
