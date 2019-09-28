@@ -73,16 +73,21 @@ def gini_impurity(data):
        
 class composition_tree():
     def __init__(self):
-        self.data = []
+        self.features = []
         self.classes = []
         self.nclasses = 0
         self.levels = []
-        self.iteration_max = 100
+        self.queue = []
+        self.itera  tion_max = 100
     def split(features, classes, index):
-        gini = gini_impurity(classes)
+        gini_orig = gini_impurity(classes)
         split_rule = []
+        classes_true = []
+        classes_false = []
         branch_true = []
         branch_false = []
+        gini_true = 0
+        gini_false = 0
         N = len(classes)
         gain_gini = 0
         for f1 in range(self.nclasses):
@@ -92,23 +97,43 @@ class composition_tree():
                 g_true = gini_impurity(split_true)
                 g_false = gini_impurity(split_false)
                 g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
-                gain = gini - g
+                gain = gini_orig - g
                 if gain > gain_gini :
                     gain_gini = gain
-                    gini
+                    gini_true = g_true
+                    gini_false = g_false
                     split_rule = [f1, f2]     
+                    classes_true = split_true
+                    classes_false = split_false 
                     branch_true = [f for f in features if f[index] == f1 and f[index+1] == f2]
                     branch_false = [f for f in features if not f[index] == f1 or not f[index+1] == f2]
-                    
-        return branch_true, branch_false, split_rule, gini, gain_gini
+        return [branch_true, branch_false], [classes_true, classes_false], [gini_true, gini_false], split_rule, gini_orig, gain_gini
 
-    def fit(data, classes):
-        self.data = data
+    def fit(features, classes, index=1):
+        self.features = features
         self.classes = classes
-        self.levels = []
-        self.queue = data
+        gini = gini_impurity(classes)
+        self.tree = {"0" : [{"features": features, "classes": classes, "gini":gini } ] }
+        
+        self.queue = [ (f, c) for f, c in zip(features, classes) ]
         n = 0
         while not len(self.queue) == 0 or n < self.iteration_max:
+            f, c = self.queue[0]:
+            branches, classes, ginis, split_rules, go, gg = split(f, c, index)
+            _ = self.queue.pop(0)
+            n += 1
+            self.tree[n] = []
+            for bf, bc, bg in zip(branches, classes, ginis):
+                self.tree[n].append({"features": bf, "classes": bc, "gini":bg })
+            
+            self.tree[n].append({"features": bf, "classes": cf, "gini":gf, "branch": "False" })
+            if gg > 0:
+                
+                if gt > 0:
+                    self.queue.append((bt, ct))
+                if gf > 0:
+                    self.queue.append((bf, cf))
+        
             
             
         
