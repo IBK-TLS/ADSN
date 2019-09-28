@@ -61,7 +61,6 @@ def genfakedb():
     fakelb.append(4)
     
     return fakedb, fakelb
-        
 
 def gini_impurity(data):
     prob = [0.] * nclasses
@@ -71,11 +70,47 @@ def gini_impurity(data):
     prob  = np.array(prob)
     return np.sum(prob*(1-prob))
 
+       
 class composition_tree():
     def __init__(self):
         self.data = []
         self.classes = []
+        self.nclasses = 0
         self.levels = []
+        self.iteration_max = 100
+    def split(features, classes, index):
+        gini = gini_impurity(classes)
+        split_rule = []
+        branch_true = []
+        branch_false = []
+        N = len(classes)
+        gain_gini = 0
+        for f1 in range(self.nclasses):
+            for f2 in range(self.nclasses):
+                split_true = [c for f, c in zip(features, classes) if f[index] == f1 and f[index+1] == f2]
+                split_false = [c for f, c in zip(features, classes) if not f[index] == f1 or not f[index+1] == f2]
+                g_true = gini_impurity(split_true)
+                g_false = gini_impurity(split_false)
+                g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
+                gain = gini - g
+                if gain > gain_gini :
+                    gain_gini = gain
+                    gini
+                    split_rule = [f1, f2]     
+                    branch_true = [f for f in features if f[index] == f1 and f[index+1] == f2]
+                    branch_false = [f for f in features if not f[index] == f1 or not f[index+1] == f2]
+                    
+        return branch_true, branch_false, split_rule, gini, gain_gini
+
+    def fit(data, classes):
+        self.data = data
+        self.classes = classes
+        self.levels = []
+        self.queue = data
+        n = 0
+        while not len(self.queue) == 0 or n < self.iteration_max:
+            
+            
         
 
 def best_split(db, lb, index):
