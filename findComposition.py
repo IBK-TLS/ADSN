@@ -38,12 +38,14 @@ def main(args):
     compotree = composition_tree(nclasses, window, labels)
     compotree.fit(features, classes)
     compositions = compotree.composition()
-    for i, rpc in enumerate(compositions):
-        print("class", i)
-        for r in rpc:
-            print(r)
-            print("or")
-        print()
+    for i, rules in enumerate(compositions):
+        print("class", i, composition_known[i])
+        for j, rule_branch in enumerate(rules):
+            for k, r in enumerate(rule_branch):
+                print(r, end=" ")
+                print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+            print("OR" if j < len(rules)-1 else " " )
+        print("#####")
 
     
 
