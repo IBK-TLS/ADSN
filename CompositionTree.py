@@ -6,7 +6,6 @@ import uuid
 
 
 labels=["N", "A", "B", "PP", "PN"]
-#labels=[0, 1, 2, 3, 4]
 nlabels = len(labels)
 nclasses = 5
 nfeatures = 4
@@ -111,7 +110,6 @@ class composition_tree():
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
             node_true, node_false, gain_gini = self.split(node)
-            #print(gain_gini, node_true.id == node_true.parent)
             self.tree.append( node_true ) 
             self.tree.append( node_false ) 
             if gain_gini > 0:
@@ -121,7 +119,18 @@ class composition_tree():
                     self.queue.append(node_false)
             n += 1
             index += 1
-
+    
+    def composition(self):
+        leaves = self.get_leaves()
+        branches = [(l.classes, self.get_branch(l)) for l in leaves]
+        rules_per_class = [[]] * nclasses
+        b = []
+        for i, (classes, branch) in enumerate(branches):
+            c = max(set(classes), key = classes.count)
+            listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
+            rules_per_class[c].append(listofrule)
+        return rules_per_class
+    
     def get_root(self):
         for node in self.tree:
             if node.id == node.parent:     
@@ -149,8 +158,8 @@ class composition_tree():
             if node.gini == 0:
                 leaves.append(node)
         return leaves 
-
-
+    
+    
     
 
 
@@ -167,27 +176,13 @@ def main(args):
     root = compotree.get_root()
     print("root", root.dict())
     print("children", [c.dict() for c in compotree.get_childrens(root.id)])
-    leaves = compotree.get_leaves()
-    print("leaves", len(leaves))
-    branches = [(l.classes, compotree.get_branch(l)) for l in leaves]
-
-    rules_per_class = [[]] * nclasses
-    b = []
-    for i, (classes, branch) in enumerate(branches):
-        c = max(set(classes), key = classes.count)
-        listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
-        rules_per_class[c].append(listofrule)
-        #print("branch:", str(i), "class:",   )
-        #b.append([n.split_rule for n in branch])
-        #print("number of rules:", len(b))
-        #composition = ""
-        #for node in branch:
-        #    composition += str(node.split_rule) + " & "
-        #print("composition:", composition)
-    for i, rpc in enumerate(rules_per_class):
-        print(i)
+    
+    compositions = compotree.composition()
+    for i, rpc in enumerate(compositions):
+        print("class", i)
         for r in rpc:
             print(r)
+            print("or")
         print()
 
 if __name__ == '__main__':
