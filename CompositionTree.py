@@ -5,13 +5,10 @@ import random
 import uuid 
 
 
-# write a cost function (entropy/Gini index ?)
-
-# write a class tree
-#class tree():
-
-nlabels = 5
+labels=["N", "A", "B", "PP", "PN"]
+nlabels = len(labels)
 nclasses = 5
+nfeatures = 4
 
 def genfakedb():
     #dataset = pd.read_csv(args.dataset)
@@ -101,7 +98,7 @@ class node_tree():
         return d
 
 class composition_tree():
-    def __init__(self, nclasses=2, nfeat=4, iteration_max=10000):
+    def __init__(self, nclasses=2, nfeat=2, iteration_max=10000):
         self.nclasses = nclasses
         self.nfeat = nfeat
         self.tree = {}
@@ -136,13 +133,14 @@ class composition_tree():
                         gain_gini = gain
                         gini_true = g_true
                         gini_false = g_false
-                        split_rule = {"index":index, "features":[f1, f2]}     
+                        split_rule_true = {"index":index, "features":[f1, f2], "condition": True }     
+                        split_rule_false = {"index":index, "features":[f1, f2], "condition": False }     
                         classes_true = split_true
                         classes_false = split_false 
                         features_true = [f for f in features if f[index] == f1 and f[index+1] == f2]
                         features_false = [f for f in features if not f[index] == f1 or not f[index+1] == f2]
-        node_true = node_tree(features_true, classes_true, gini_true, node.id, split_rule)
-        node_false = node_tree(features_false, classes_false, gini_false, node.id, split_rule)
+        node_true = node_tree(features_true, classes_true, gini_true, node.id, split_rule_true)
+        node_false = node_tree(features_false, classes_false, gini_false, node.id, split_rule_false)
         return node_true, node_false, split_rule, gain_gini
 
     def fit(self, features, classes):
@@ -197,6 +195,11 @@ class composition_tree():
             if node.gini == 0:
                 leaves.append(node)
         return leaves 
+
+
+    
+
+
 ### MAIN ###
 
 
@@ -205,25 +208,33 @@ def main(args):
     c = list(zip(ft, cl))
     random.shuffle(c)
     ft, cl = zip(*c)
-    compotree = composition_tree(5)
+    compotree = composition_tree(nclasses, nfeatures)
     compotree.fit(ft, cl)
     root = compotree.get_root()
     print("root", root.dict())
     print("children", [c.dict() for c in compotree.get_childrens(root.id)])
     leaves = compotree.get_leaves()
-    #print("leaves", [l.dict() for l in leaves])
+    print("leaves", len(leaves))
     branches = [(l.classes, compotree.get_branch(l)) for l in leaves]
+
+    rules_per_class = [[]] * nclasses
+    b = []
     for i, (classes, branch) in enumerate(branches):
-        print("branch:", str(i), "class:", classes )
-        composition = ""
-        for node in branch:
-            #print(node.dict())
-            composition += str(node.split_rule) + " & "
-        print(composition)
-    #branch_true, branch_false, split, gini , gain = best_split(db, lb, 0)
-    #print(branch_false)
-
-
+        c = max(set(classes), key = classes.count)
+        listofrule = [n.split_rule for n in branch]
+        rules_per_class[c].append(listofrule)
+        #print("branch:", str(i), "class:",   )
+        #b.append([n.split_rule for n in branch])
+        #print("number of rules:", len(b))
+        #composition = ""
+        #for node in branch:
+        #    composition += str(node.split_rule) + " & "
+        #print("composition:", composition)
+    for i, rpc in enumerate(rules_per_class):
+        print(i)
+        for r in rpc:
+            print(r)
+        print()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
     parser.add_argument("-d", "--dataset",
