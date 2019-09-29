@@ -55,9 +55,15 @@ def genfakedb():
     fakelb.append(0)
     fakedb.append([0,4,0,0])
     fakelb.append(1)
+    fakedb.append([4,3,4,0])
+    fakelb.append(2)
     fakedb.append([0,4,3,4])
     fakelb.append(2)
+    fakedb.append([3,4,0,0])
+    fakelb.append(3)
     fakedb.append([0,3,4,0])
+    fakelb.append(3)
+    fakedb.append([0,0,3,4])
     fakelb.append(3)
     fakedb.append([0,3,0,0])
     fakelb.append(4)
@@ -100,6 +106,7 @@ class composition_tree():
         self.nfeat = nfeat
         self.tree = {}
         self.queue = []
+        self.root = None
         self.iteration_max = iteration_max
 
     def split(self, node):
@@ -144,6 +151,7 @@ class composition_tree():
         gini = gini_impurity(classes)
         root = node_tree(features, classes, gini, 0, None)
         root.set_parent(root.id)
+        self.root = root
         self.tree = [ root ]
         self.queue = [ root ]
         n = 0
@@ -151,8 +159,7 @@ class composition_tree():
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
             node_true, node_false, split_rules, gain_gini = self.split(node)
-            print(gain_gini)
-            n += 1
+            #print(gain_gini, node_true.id == node_true.parent)
             self.tree.append( node_true ) 
             self.tree.append( node_false ) 
             if gain_gini > 0:
@@ -160,6 +167,8 @@ class composition_tree():
                     self.queue.append(node_true)
                 if node_false.gini > 0:
                     self.queue.append(node_false)
+            n += 1
+            index += 1
 
     def get_root(self):
         for node in self.tree:
@@ -167,19 +176,19 @@ class composition_tree():
                 return node 
     def get_parent(self, id):
         for node in self.tree:
-            if node.parent == id:
+            if node.id == id:
                 return node
     def get_childrens(self, id):
         childrens = []
         for node in self.tree:
-            if node.parent == id:
-                children.append(node)
+            if not node == self.root and node.parent == id:
+                childrens.append(node)
         return childrens
     def get_branch(self, leaf):
         branch = [leaf]
         node = leaf 
-        while node.parent == node.id:
-            node = self.get_parent(node.id)
+        while not node == self.root :
+            node = self.get_parent(node.parent)
             branch.append(node)
         return branch
     def get_leaves(self):
@@ -198,12 +207,19 @@ def main(args):
     ft, cl = zip(*c)
     compotree = composition_tree(5)
     compotree.fit(ft, cl)
-    root = compotree.get_root().dict()
-    print("root", root)
+    root = compotree.get_root()
+    print("root", root.dict())
+    print("children", [c.dict() for c in compotree.get_childrens(root.id)])
     leaves = compotree.get_leaves()
-    print("leaves", [l.dict() for l in leaves])
-    branches = [compotree.get_branch(l) for l in leaves]
-    print("branches", branches)
+    #print("leaves", [l.dict() for l in leaves])
+    branches = [(l.classes, compotree.get_branch(l)) for l in leaves]
+    for i, (classes, branch) in enumerate(branches):
+        print("branch:", str(i), "class:", classes )
+        composition = ""
+        for node in branch:
+            #print(node.dict())
+            composition += str(node.split_rule) + " & "
+        print(composition)
     #branch_true, branch_false, split, gini , gain = best_split(db, lb, 0)
     #print(branch_false)
 
