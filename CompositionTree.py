@@ -5,7 +5,8 @@ import random
 import uuid 
 
 
-labels=["N", "A", "B", "PP", "PN"]
+#labels=["N", "A", "B", "PP", "PN"]
+labels=[0, 1, 2, 3, 4]
 nlabels = len(labels)
 nclasses = 5
 nfeatures = 4
@@ -98,9 +99,13 @@ class node_tree():
         return d
 
 class composition_tree():
-    def __init__(self, nclasses=2, nfeat=2, iteration_max=10000):
+    def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10000):
         self.nclasses = nclasses
         self.nfeat = nfeat
+        if labels:
+            self.labels = labels
+        else:
+            self.labels = list(range(nfeat))
         self.tree = {}
         self.queue = []
         self.root = None
@@ -111,7 +116,8 @@ class composition_tree():
         classes = node.classes
         parent = node.parent
         gini_orig = node.gini
-        split_rule = []
+        split_rule_true = []
+        split_rule_false = []
         classes_true = []
         classes_false = []
         features_true = []
@@ -121,8 +127,8 @@ class composition_tree():
         N = len(classes)
         gain_gini = 0
         for index in range(self.nfeat-1):
-            for f1 in range(self.nclasses):
-                for f2 in range(self.nclasses):
+            for f1 in self.labels: #range(self.nclasses):
+                for f2 in self.labels: #range(self.nclasses):
                     split_true = [c for f, c in zip(features, classes) if f[index] == f1 and f[index+1] == f2]
                     split_false = [c for f, c in zip(features, classes) if not f[index] == f1 or not f[index+1] == f2]
                     g_true = gini_impurity(split_true)
@@ -141,7 +147,7 @@ class composition_tree():
                         features_false = [f for f in features if not f[index] == f1 or not f[index+1] == f2]
         node_true = node_tree(features_true, classes_true, gini_true, node.id, split_rule_true)
         node_false = node_tree(features_false, classes_false, gini_false, node.id, split_rule_false)
-        return node_true, node_false, split_rule, gain_gini
+        return node_true, node_false, gain_gini
 
     def fit(self, features, classes):
         self.features = features
@@ -156,7 +162,7 @@ class composition_tree():
         index = 0
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
-            node_true, node_false, split_rules, gain_gini = self.split(node)
+            node_true, node_false, gain_gini = self.split(node)
             #print(gain_gini, node_true.id == node_true.parent)
             self.tree.append( node_true ) 
             self.tree.append( node_false ) 
@@ -208,7 +214,7 @@ def main(args):
     c = list(zip(ft, cl))
     random.shuffle(c)
     ft, cl = zip(*c)
-    compotree = composition_tree(nclasses, nfeatures)
+    compotree = composition_tree(nclasses, nfeatures, labels)
     compotree.fit(ft, cl)
     root = compotree.get_root()
     print("root", root.dict())
@@ -235,6 +241,7 @@ def main(args):
         for r in rpc:
             print(r)
         print()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
     parser.add_argument("-d", "--dataset",
