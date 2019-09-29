@@ -37,12 +37,15 @@ def main(args):
     
     compotree = composition_tree(nclasses, window, labels)
     compotree.fit(features, classes)
-    root = compotree.get_root()
-    #print("root", root.dict())
-    #print("children", [c.dict() for c in compotree.get_childrens(root.id)])
-    leaves = compotree.get_leaves()
-    print("leaves", [l.dict() for l in leaves])
-    #branches = [(l.classes, compotree.get_branch(l)) for l in leaves]
+    compositions = compotree.composition()
+    for i, rpc in enumerate(compositions):
+        print("class", i)
+        for r in rpc:
+            print(r)
+            print("or")
+        print()
+
+    
 
     
 if __name__ == '__main__':
