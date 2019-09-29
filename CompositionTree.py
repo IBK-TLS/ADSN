@@ -5,67 +5,15 @@ import random
 import uuid 
 
 
-#labels=["N", "A", "B", "PP", "PN"]
-labels=[0, 1, 2, 3, 4]
+labels=["N", "A", "B", "PP", "PN"]
+#labels=[0, 1, 2, 3, 4]
 nlabels = len(labels)
 nclasses = 5
 nfeatures = 4
 
 def genfakedb():
-    #dataset = pd.read_csv(args.dataset)
-    #print(dataset.tail())
-    fakedb = []
-    fakelb = []
-
-    fakedb.append([1,1,1,1])
-    fakelb.append(0)
-    fakedb.append([1,1,1,1])
-    fakelb.append(0)
-    fakedb.append([1,1,1,1])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,1,1,0])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([1,1,1,1])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,0,0,0])
-    fakelb.append(0)
-    fakedb.append([0,1,1,0])
-    fakelb.append(0)
-    fakedb.append([1,1,1,1])
-    fakelb.append(0)
-    fakedb.append([1,2,2,1])
-    fakelb.append(0)
-    fakedb.append([1,2,2,1])
-    fakelb.append(0)
-    fakedb.append([1,2,2,1])
-    fakelb.append(0)
-    fakedb.append([0,4,0,0])
-    fakelb.append(1)
-    fakedb.append([4,3,4,0])
-    fakelb.append(2)
-    fakedb.append([0,4,3,4])
-    fakelb.append(2)
-    fakedb.append([3,4,0,0])
-    fakelb.append(3)
-    fakedb.append([0,3,4,0])
-    fakelb.append(3)
-    fakedb.append([0,0,3,4])
-    fakelb.append(3)
-    fakedb.append([0,3,0,0])
-    fakelb.append(4)
-    
+    fakelb = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 3, 4]
+    fakedb = [["A","A","A","A"],["N","N","N","N"],["N","A","A","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["A","A","A","A"],["N","N","N","N"],["N","N","N","N"],["N","A","A","N"],["A","A","A","A"],["A","B","B","A"],["A","B","B","A"],["A","B","B","A"],["N","PN","N","N"],["PN","PP","PN","N"],["N","PN","PP","PN"],["PP","PN","N","N"],["N","PP","PN","N"],["N","N","PP","PN"],["N","PP","N","N"]]
     return fakedb, fakelb
 
 def gini_impurity(data):
@@ -139,8 +87,8 @@ class composition_tree():
                         gain_gini = gain
                         gini_true = g_true
                         gini_false = g_false
-                        split_rule_true = {"index":index, "features":[f1, f2], "condition": True }     
-                        split_rule_false = {"index":index, "features":[f1, f2], "condition": False }     
+                        split_rule_true = {"index":index, "features":[f1, f2], "condition": True, "rule" :  "(" +str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"}     
+                        split_rule_false = {"index":index, "features":[f1, f2], "condition": False, "rule": "not(" + str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"  }     
                         classes_true = split_true
                         classes_false = split_false 
                         features_true = [f for f in features if f[index] == f1 and f[index+1] == f2]
@@ -227,7 +175,7 @@ def main(args):
     b = []
     for i, (classes, branch) in enumerate(branches):
         c = max(set(classes), key = classes.count)
-        listofrule = [n.split_rule for n in branch]
+        listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
         rules_per_class[c].append(listofrule)
         #print("branch:", str(i), "class:",   )
         #b.append([n.split_rule for n in branch])
