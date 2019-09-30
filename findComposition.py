@@ -21,7 +21,7 @@ def main(args):
     labels=["N", "A", "B", "PP", "PN"]
     nlabels = len(labels)
     nclasses = len(composition_known)
-    window = 5 
+    window = 4 
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
