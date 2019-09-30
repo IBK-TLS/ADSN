@@ -120,7 +120,7 @@ class composition_tree():
     def rules_per_class(self):
         leaves = self.get_leaves()
         branches = [(l.classes, self.get_branch(l)) for l in leaves]
-        rules_per_class = [[]] * nclasses
+        rules_per_class = [[] for _ in range(nclasses)]
         b = []
         for i, (classes, branch) in enumerate(branches):
             c = max(set(classes), key = classes.count)
@@ -131,8 +131,7 @@ class composition_tree():
     def composition(self):
         leaves = self.get_leaves()
         branches = [(l.classes, self.get_branch(l)) for l in leaves]
-        rules_per_class = [[]] * self.nclasses
-        b = []
+        rules_per_class = [[] for _ in range(nclasses)]
         for i, (classes, branch) in enumerate(branches):
             c = max(set(classes), key = classes.count)
             listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
@@ -196,6 +195,10 @@ class composition_tree():
         for node in self.tree:
             if node.gini == 0:
                 leaves.append(node)
+            else:
+                childrens = self.get_childrens(node.id)
+                if len(childrens) == 0:
+                    leaves.append(node)
         return leaves 
     
     
@@ -214,32 +217,42 @@ def main(args):
     ft, cl = zip(*c)
     compotree = composition_tree(nclasses, nfeatures, labels)
     compotree.fit(ft, cl)
-    root = compotree.get_root()
-    #print("root", root.dict())
+    #root = compotree.get_root()
+    #print("root id", root.id)
     #print("children", [c.dict() for c in compotree.get_childrens(root.id)])
     
     compositions = compotree.composition()
-    leaves = compotree.get_leaves()
-    leaf = [l.dict() for l in leaves]
-    #branches = [(l.dict(), compotree.get_branch(l)) for l in leaves]
-    print(leaf) 
-    
+    #print(compositions)
+    #leaves = compotree.get_leaves()
+    #for leaf in leaves:
+    #    print(leaf.id) 
+    #    
+    #test = [[] for _ in range(nclasses)]
+    #
+    #branches = [ (l.classes, compotree.get_branch(l)) for l in leaves]
+    #for classes, branch in branches:
+    #    c = max(set(classes), key = classes.count)
+    #    rules = [n.split_rule["rule"] for n in branch if n.split_rule]
+    #    print(c, rules ) 
+    #    test[c].append(rules) 
+    #    print(test)
+    #    print()
     for i, rpc in enumerate(compositions):
         print("class", i)
-        for r in rpc:
-            print(r)
-            print("or")
+        for j, rules in enumerate(rpc):
+            print(rules)
+            print("or" if j < len(rpc)-1 else "")
         print()
-    class_0 = compotree.is_class(["N","PP","PN","N"], 0)
-    print(class_0)
-    class_1 = compotree.is_class(["N","PP","PN","N"], 1)
-    print(class_1)
-    class_2 = compotree.is_class(["N","PP","PN","N"], 2)
-    print(class_2)
-    class_3 = compotree.is_class(["N","PP","PN","N"], 3)
-    print(class_3)
-    class_4 = compotree.is_class(["N","PP","PN","N"], 4)
-    print(class_4)
+    #class_0 = compotree.is_class(["N","PP","PN","N"], 0)
+    #print(class_0)
+    #class_1 = compotree.is_class(["N","PP","PN","N"], 1)
+    #print(class_1)
+    #class_2 = compotree.is_class(["N","PP","PN","N"], 2)
+    #print(class_2)
+    #class_3 = compotree.is_class(["N","PP","PN","N"], 3)
+    #print(class_3)
+    #class_4 = compotree.is_class(["N","PP","PN","N"], 4)
+    #print(class_4)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
