@@ -10,11 +10,6 @@ nlabels = len(labels)
 nclasses = 5
 nfeatures = 4
 
-def genfakedb():
-    fakelb = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 3, 4]
-    fakedb = [["A","A","A","A"],["N","N","N","N"],["N","A","A","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["A","A","A","A"],["N","N","N","N"],["N","N","N","N"],["N","A","A","N"],["A","A","A","A"],["A","B","B","A"],["A","B","B","A"],["A","B","B","A"],["N","PN","N","N"],["PN","PP","PN","N"],["N","PN","PP","PN"],["PP","PN","N","N"],["N","PP","PN","N"],["N","N","PP","PN"],["N","PP","N","N"]]
-    return fakedb, fakelb
-
 def gini_impurity(data):
     prob = [0.] * nclasses
     N = len(data)
@@ -53,8 +48,9 @@ class composition_tree():
             self.labels = labels
         else:
             self.labels = list(range(nfeat))
-        self.tree = {}
+        self.tree = []
         self.queue = []
+        self.rules = []
         self.root = None
         self.iteration_max = iteration_max
 
@@ -119,18 +115,61 @@ class composition_tree():
                     self.queue.append(node_false)
             n += 1
             index += 1
-    
-    def composition(self):
+        self.rules = self.rules_per_class()
+
+    def rules_per_class(self):
         leaves = self.get_leaves()
         branches = [(l.classes, self.get_branch(l)) for l in leaves]
         rules_per_class = [[]] * nclasses
         b = []
         for i, (classes, branch) in enumerate(branches):
             c = max(set(classes), key = classes.count)
+            listofrule = [n.split_rule for n in branch if n.split_rule]
+            rules_per_class[c].append(listofrule)
+        return rules_per_class
+ 
+    def composition(self):
+        leaves = self.get_leaves()
+        branches = [(l.classes, self.get_branch(l)) for l in leaves]
+        rules_per_class = [[]] * self.nclasses
+        b = []
+        for i, (classes, branch) in enumerate(branches):
+            c = max(set(classes), key = classes.count)
             listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
             rules_per_class[c].append(listofrule)
         return rules_per_class
-    
+
+    def is_class(self, feat, c):
+        predicted_class = []
+        rules_for_class = self.rules[c]    
+        boolean_class = []
+        pc = [True]*len(rules_for_class)
+        for i, srules in enumerate(rules_for_class):
+            for rule in srules:
+                f1 = feat[rule["index"]]
+                f2 = feat[rule["index"]+1]
+                condition = f1 == rule["features"][0] and f2 == rule["features"][1]
+                pc[i] = pc[i] and condition == rule["condition"]
+        return pc
+
+  
+    def predict(self, feat):
+        predicted_class = []
+        for c, rules_per_class in enumerate(self.rules):
+            pc = [True]*len(rules_per_class)
+            for i, srules in enumerate(rules_per_class):
+                #print(rules)
+                for rule in srules:
+                    #print(rule)
+                    f1 = feat[rule["index"]]
+                    f2 = feat[rule["index"]+1]
+                    condition = f1 == rule["features"][0] and f2 == rule["features"][1]
+                    pc[i] = pc[i] and condition == rule["condition"]
+                    if condition == rule["condition"]:
+                        print( feat, condition, rule["rule"])
+            predicted_class.append(pc)
+        return predicted_class
+
     def get_root(self):
         for node in self.tree:
             if node.id == node.parent:     
@@ -167,23 +206,40 @@ class composition_tree():
 
 
 def main(args):
-    ft, cl = genfakedb()
+    cl = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 3, 4]
+    ft = [["A","A","A","A"],["N","N","N","N"],["N","A","A","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["N","N","N","N"],["A","A","A","A"],["N","N","N","N"],["N","N","N","N"],["N","A","A","N"],["A","A","A","A"],["A","B","B","A"],["A","B","B","A"],["A","B","B","A"],["N","PN","N","N"],["PN","PP","PN","N"],["N","PN","PP","PN"],["PP","PN","N","N"],["N","PP","PN","N"],["N","N","PP","PN"],["N","PP","N","N"]]
+
     c = list(zip(ft, cl))
     random.shuffle(c)
     ft, cl = zip(*c)
     compotree = composition_tree(nclasses, nfeatures, labels)
     compotree.fit(ft, cl)
     root = compotree.get_root()
-    print("root", root.dict())
-    print("children", [c.dict() for c in compotree.get_childrens(root.id)])
+    #print("root", root.dict())
+    #print("children", [c.dict() for c in compotree.get_childrens(root.id)])
     
     compositions = compotree.composition()
+    leaves = compotree.get_leaves()
+    leaf = [l.dict() for l in leaves]
+    #branches = [(l.dict(), compotree.get_branch(l)) for l in leaves]
+    print(leaf) 
+    
     for i, rpc in enumerate(compositions):
         print("class", i)
         for r in rpc:
             print(r)
             print("or")
         print()
+    class_0 = compotree.is_class(["N","PP","PN","N"], 0)
+    print(class_0)
+    class_1 = compotree.is_class(["N","PP","PN","N"], 1)
+    print(class_1)
+    class_2 = compotree.is_class(["N","PP","PN","N"], 2)
+    print(class_2)
+    class_3 = compotree.is_class(["N","PP","PN","N"], 3)
+    print(class_3)
+    class_4 = compotree.is_class(["N","PP","PN","N"], 4)
+    print(class_4)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
