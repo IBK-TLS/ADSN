@@ -141,32 +141,25 @@ class composition_tree():
     def is_class(self, feat, c):
         predicted_class = []
         rules_for_class = self.rules[c]    
-        boolean_class = []
-        pc = [True]*len(rules_for_class)
+        #pc = [True for _ in range(len(rules_for_class))]
+        isclass = False
         for i, srules in enumerate(rules_for_class):
+            fitrule = True
             for rule in srules:
                 f1 = feat[rule["index"]]
                 f2 = feat[rule["index"]+1]
                 condition = f1 == rule["features"][0] and f2 == rule["features"][1]
-                pc[i] = pc[i] and condition == rule["condition"]
-        return pc
+                #pc[i] = pc[i] and condition == rule["condition"]
+                fitrule = fitrule and condition == rule["condition"]
+            isclass = isclass or fitrule
+        return isclass
 
   
     def predict(self, feat):
         predicted_class = []
-        for c, rules_per_class in enumerate(self.rules):
-            pc = [True]*len(rules_per_class)
-            for i, srules in enumerate(rules_per_class):
-                #print(rules)
-                for rule in srules:
-                    #print(rule)
-                    f1 = feat[rule["index"]]
-                    f2 = feat[rule["index"]+1]
-                    condition = f1 == rule["features"][0] and f2 == rule["features"][1]
-                    pc[i] = pc[i] and condition == rule["condition"]
-                    if condition == rule["condition"]:
-                        print( feat, condition, rule["rule"])
-            predicted_class.append(pc)
+        for c in range(len(self.rules)):
+            ic = self.is_class(feat, c)    
+            predicted_class.append(ic)
         return predicted_class
 
     def get_root(self):

@@ -55,7 +55,17 @@ def main(args):
                 print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
             print("OR" if j < len(rules)-1 else "" )
         print("#####")
-    
+   
+    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 0) 
+    #print(pc, isclass)
+    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 1) 
+    #print(pc, isclass)
+    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 2) 
+    #print(pc, isclass)
+    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 3) 
+    #print(pc, isclass)
+    class_found = compotree.predict(["N", "PN", "N", "N"]) 
+    print(class_found)
     #leaves = compotree.get_leaves()
     #for leaf in leaves:
     #    #c = max(set(leaf.classes), key = leaf.classes.count)
