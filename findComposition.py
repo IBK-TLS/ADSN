@@ -4,7 +4,7 @@ import argparse
 import random
 import uuid 
 
-from CompositionTree import composition_tree 
+from CompositionTree import composition_tree, composition_tree_2 
 
 
 
@@ -21,7 +21,7 @@ def main(args):
     labels=["N", "A", "B", "PP", "PN"]
     nlabels = len(labels)
     nclasses = len(composition_known)
-    window = 4 
+    window = 5 
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
@@ -37,14 +37,14 @@ def main(args):
                 print(i, j, c, c_indices, f )
                 classes[i] = j
 
-    print(np.histogram(classes, bins=list(range(nclasses))))
+    print("histo", np.histogram(classes, bins=list(range(nclasses))), nclasses)
 
     if not len(features[-1]) == window:
         _ = features.pop(-1)
         _ = classes.pop(-1) 
 
     
-    compotree = composition_tree(nclasses, window, labels, iteration_max=100000000)
+    compotree = composition_tree_2(nclasses, window, labels, iteration_max=100000000)
     compotree.fit(features, classes)
     
     compositions = compotree.composition()
