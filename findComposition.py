@@ -25,15 +25,16 @@ def main(args):
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
-    features = [features[x:x+window] for x in range(0, len(features), window)]
-    #features = [features[x:x+window] for x in range(len(features)- window)]
+    #features = [features[x:x+window] for x in range(0, len(features), window)]
+    features = [features[x:x+window] for x in range(len(features)- window)]
     classes = [0 for _ in range(len(features))]
     for i, f in enumerate(features):
         for j, c in enumerate(composition_known):
             #print(i, f, c )
             c_indices = [(i, i+len(c)) for i in range(len(f)) if f[i:i+len(c)] == c] 
+            win_feat = [f[i:i+len(c)] for i in range(len(f)) if f[i:i+len(c)] == c] 
             if not len(c_indices) == 0:
-                print(j, c, c_indices)
+                print(i, j, c, c_indices, f )
                 classes[i] = j
 
     print(np.histogram(classes, bins=list(range(nclasses))))
@@ -64,8 +65,8 @@ def main(args):
     #print(pc, isclass)
     #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 3) 
     #print(pc, isclass)
-    class_found = compotree.predict(["N", "PN", "N", "N"]) 
-    print(class_found)
+    #class_found = compotree.predict(["N", "PN", "N", "N"]) 
+    #print(class_found)
     #leaves = compotree.get_leaves()
     #for leaf in leaves:
     #    #c = max(set(leaf.classes), key = leaf.classes.count)
