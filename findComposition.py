@@ -4,12 +4,15 @@ import argparse
 import random
 import uuid 
 
-from CompositionTree import composition_tree, composition_tree_2 
+from CompositionTree import composition_tree, composition_tree_2, inclusive_composition_tree
 
 
 
 
 def main(args):
+
+    ### DATA PREPARATION ###
+ 
     composition_known = [
         ["X"],
         ["N", "PN", "N"], 
@@ -21,7 +24,7 @@ def main(args):
     labels=["N", "A", "B", "PP", "PN"]
     nlabels = len(labels)
     nclasses = len(composition_known)
-    window = 5 
+    window = 6
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
@@ -43,20 +46,27 @@ def main(args):
         _ = features.pop(-1)
         _ = classes.pop(-1) 
 
-    
-    compotree = composition_tree_2(nclasses, window, labels, iteration_max=100000000)
+    ### 
+
+    compotree = composition_tree(nclasses, window, labels, iteration_max=100000000)
     compotree.fit(features, classes)
     
-    compositions = compotree.composition()
-    for i, rules in enumerate(compositions):
-        print("class", i, composition_known[i] )
-        for j, rule_branch in enumerate(rules):
-            for k, r in enumerate(rule_branch):
-                print(r, end=" ")
-                print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
-            print("OR" if j < len(rules)-1 else "" )
-        print("#####")
-   
+    #compositions = compotree.composition()
+    #for i, rules in enumerate(compositions):
+    #    print("class", i, composition_known[i] )
+    #    for j, rule_branch in enumerate(rules):
+    #        for k, r in enumerate(rule_branch):
+    #            print(r, end=" ")
+    #            print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+    #        print("OR" if j < len(rules)-1 else "" )
+    #    print("#####")
+    
+    inclusive_branch = compotree.inclusive_branch()
+     
+    print(inclusive_branch[0].classes)
+    #inclusive_branch = inclusive_branches[0]
+    #for ib in inclusive_branches:
+    print([(list(set(n.classes)), n.gini, n.split_rule["rule"]) for n in inclusive_branch if n.split_rule])
     #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 0) 
     #print(pc, isclass)
     #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 1) 
@@ -73,7 +83,6 @@ def main(args):
     #    print(leaf.gini) 
     #    print(np.histogram(leaf.classes, bins=list(range(nclasses))))
     
-
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
