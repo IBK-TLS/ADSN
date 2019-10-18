@@ -160,7 +160,7 @@ class composition_tree_2():
         for i, (classes, branch) in enumerate(branches):
             if not len(classes) == 0:
                 c = max(set(classes), key = classes.count)
-                listofrule = [n.split_rule["rule"] for n in branch if n.split_rule]
+                listofrule = [(len(n.classes), n.split_rule["rule"]) for n in branch if n.split_rule]
                 rules_per_class[c].append(listofrule)
         return rules_per_class
 
@@ -261,7 +261,7 @@ class composition_tree():
                     g_false = gini_impurity(split_false, self.nclasses)
                     g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
                     gain = gini_orig - g
-                    print(gain)
+                    #print(gain)
                     if gain > gain_gini :
                         gain_gini = gain
                         gini_true = g_true

@@ -24,7 +24,7 @@ def main(args):
     labels=["N", "A", "B", "PP", "PN"]
     nlabels = len(labels)
     nclasses = len(composition_known)
-    window = 6
+    window = 4
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
@@ -48,25 +48,26 @@ def main(args):
 
     ### 
 
-    compotree = composition_tree(nclasses, window, labels, iteration_max=100000000)
+    compotree = composition_tree_2(nclasses, window, labels, iteration_max=100000000)
     compotree.fit(features, classes)
     
-    #compositions = compotree.composition()
-    #for i, rules in enumerate(compositions):
-    #    print("class", i, composition_known[i] )
-    #    for j, rule_branch in enumerate(rules):
-    #        for k, r in enumerate(rule_branch):
-    #            print(r, end=" ")
-    #            print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
-    #        print("OR" if j < len(rules)-1 else "" )
-    #    print("#####")
+    compositions = compotree.composition()
+    for i, rules in enumerate(compositions):
+        print("class", i, composition_known[i] )
+        for j, rule_branch in enumerate(rules):
+            print("support:", rule_branch[0][0])
+            for k, (n, r) in enumerate(rule_branch):
+                print(r, end=" ")
+                print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+            print("OR" if j < len(rules)-1 else "" )
+        print("#####")
     
-    inclusive_branch = compotree.inclusive_branch()
+    #inclusive_branch = compotree.inclusive_branch()
      
-    print(inclusive_branch[0].classes)
+    #print(inclusive_branch[0].classes)
     #inclusive_branch = inclusive_branches[0]
     #for ib in inclusive_branches:
-    print([(list(set(n.classes)), n.gini, n.split_rule["rule"]) for n in inclusive_branch if n.split_rule])
+    #print([(list(set(n.classes)), n.gini, n.split_rule["rule"]) for n in inclusive_branch if n.split_rule])
     #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 0) 
     #print(pc, isclass)
     #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 1) 
