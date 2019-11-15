@@ -5,6 +5,17 @@ import random
 import uuid 
 
 
+def rule_horizontal_pruning(rules):
+    for j, rule_branch in enumerate(rules):
+        print("support:", rule_branch[0][0])
+        for k, (n, r) in enumerate(rule_branch):
+            print(r, end=" ")
+            print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+        print("OR" if j < len(rules)-1 else "" )
+
+
+
+
 def gini_impurity(data, nclasses):
     prob = [0. for _ in  range(nclasses)]
     N = len(data)
@@ -96,10 +107,10 @@ class composition_tree_2():
                         gini_type2 = g_type2
                         gini_type3 = g_type3
                         gini_type4 = g_type4
-                        split_rule_type1 = {"index":index, "features":[f1, f2], "condition": [True, True], "rule":"" +str(f1)+"_"+str(index)+"."+str(f2)+"_"+str(index+1)+""}     
-                        split_rule_type2 = {"index":index, "features":[f1, f2], "condition": [False, True], "rule":"not("+str(f1)+"_"+str(index)+")."+str(f2)+"_"+str(index+1)+""}     
-                        split_rule_type3 = {"index":index, "features":[f1, f2], "condition": [True, False], "rule":"" +str(f1)+"_"+str(index)+".not("+str(f2)+"_"+str(index+1)+")"}     
-                        split_rule_type4 = {"index":index, "features":[f1, f2], "condition": [False, False], "rule":"not("+str(f1)+"_"+str(index)+").not("+str(f2)+"_"+str(index+1)+")"}     
+                        split_rule_type1 = {"index":index, "features":[f1, f2], "conditions": [True, True], "rule":"" +str(f1)+"_"+str(index)+"."+str(f2)+"_"+str(index+1)+""}     
+                        split_rule_type2 = {"index":index, "features":[f1, f2], "conditions": [False, True], "rule":"not("+str(f1)+"_"+str(index)+")."+str(f2)+"_"+str(index+1)+""}     
+                        split_rule_type3 = {"index":index, "features":[f1, f2], "conditions": [True, False], "rule":"" +str(f1)+"_"+str(index)+".not("+str(f2)+"_"+str(index+1)+")"}     
+                        split_rule_type4 = {"index":index, "features":[f1, f2], "conditions": [False, False], "rule":"not("+str(f1)+"_"+str(index)+").not("+str(f2)+"_"+str(index+1)+")"}     
                         classes_type1 = split_type1
                         classes_type2 = split_type2
                         classes_type3 = split_type3
@@ -149,7 +160,7 @@ class composition_tree_2():
         for i, (classes, branch) in enumerate(branches):
             if not len(classes) == 0:
                 c = max(set(classes), key = classes.count)
-                listofrule = [n.split_rule for n in branch if n.split_rule]
+                listofrule = [ (len(n.classes), n.split_rule) for n in branch if n.split_rule]
                 rules_per_class[c].append(listofrule)
         return rules_per_class
  
@@ -176,7 +187,7 @@ class composition_tree_2():
                 f2 = feat[rule["index"]+1]
                 condition = f1 == rule["features"][0] and f2 == rule["features"][1]
                 #pc[i] = pc[i] and condition == rule["condition"]
-                fitrule = fitrule and condition == rule["condition"]
+                fitrule = fitrule and condition == rule["conditions"]
             isclass = isclass or fitrule
         return isclass
 
@@ -266,8 +277,8 @@ class composition_tree():
                         gain_gini = gain
                         gini_true = g_true
                         gini_false = g_false
-                        split_rule_true = {"index":index, "features":[f1, f2], "condition": True, "rule" :  "(" +str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"}     
-                        split_rule_false = {"index":index, "features":[f1, f2], "condition": False, "rule": "not(" + str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"  }     
+                        split_rule_true = {"index":index, "features":[f1, f2], "conditions": True, "rule" :  "(" +str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"}     
+                        split_rule_false = {"index":index, "features":[f1, f2], "conditions": False, "rule": "not(" + str(f1) + "_" + str(index) + "." + str(f2) + "_" + str(index+1) + ")"  }     
                         classes_true = split_true
                         classes_false = split_false 
                         
@@ -337,7 +348,7 @@ class composition_tree():
                 f2 = feat[rule["index"]+1]
                 condition = f1 == rule["features"][0] and f2 == rule["features"][1]
                 #pc[i] = pc[i] and condition == rule["condition"]
-                fitrule = fitrule and condition == rule["condition"]
+                fitrule = fitrule and condition == rule["conditions"]
             isclass = isclass or fitrule
         return isclass
 
@@ -350,7 +361,7 @@ class composition_tree():
             condition = True
             for node in branch:
                 if node.split_rule:
-                    condition = condition and node.split_rule["condition"]
+                    condition = condition and node.split_rule["conditions"]
                 if condition == False:
                     break
             if condition == True:

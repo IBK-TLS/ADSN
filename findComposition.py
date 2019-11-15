@@ -7,7 +7,20 @@ import uuid
 from CompositionTree import composition_tree, composition_tree_2, inclusive_composition_tree
 
 
-
+def pruning_branch_rule(rule_branch):
+    positive_label = []
+    for (_, rule) in rule_branch:
+        if rule["conditions"][0] == True:
+            positive_label.append((rule["index"], rule["features"][0]))
+        if rule["conditions"][1] == True:
+            positive_label.append((rule["index"]+1, rule["features"][1]))
+        
+        print(positive_label)
+#    for i, (_, rule) in enumerate(rule_branch):
+#        if rule["index"] in [index for (index, _) in positive_label]:
+#            rule
+        
+    
 
 def main(args):
 
@@ -37,7 +50,7 @@ def main(args):
             c_indices = [(i, i+len(c)) for i in range(len(f)) if f[i:i+len(c)] == c] 
             win_feat = [f[i:i+len(c)] for i in range(len(f)) if f[i:i+len(c)] == c] 
             if not len(c_indices) == 0:
-                print(i, j, c, c_indices, f )
+                #print(i, j, c, c_indices, f )
                 classes[i] = j
 
     print("histo", np.histogram(classes, bins=list(range(nclasses))), nclasses)
@@ -51,13 +64,14 @@ def main(args):
     compotree = composition_tree_2(nclasses, window, labels, iteration_max=100000000)
     compotree.fit(features, classes)
     
-    compositions = compotree.composition()
+    compositions = compotree.rules_per_class()
     for i, rules in enumerate(compositions):
         print("class", i, composition_known[i] )
         for j, rule_branch in enumerate(rules):
+            pruning_branch_rule(rule_branch)
             print("support:", rule_branch[0][0])
             for k, (n, r) in enumerate(rule_branch):
-                print(r, end=" ")
+                print(r["rule"], end=" ")
                 print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
             print("OR" if j < len(rules)-1 else "" )
         print("#####")
