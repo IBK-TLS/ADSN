@@ -4,23 +4,9 @@ import argparse
 import random
 import uuid 
 
-from CompositionTree import composition_tree, composition_tree_2, inclusive_composition_tree
+from CompositionTree import composition_tree, composition_tree_2, composition_tree_3
 
 
-def pruning_branch_rule(rule_branch):
-    positive_label = []
-    for (_, rule) in rule_branch:
-        if rule["conditions"][0] == True:
-            positive_label.append((rule["index"], rule["features"][0]))
-        if rule["conditions"][1] == True:
-            positive_label.append((rule["index"]+1, rule["features"][1]))
-        
-        print(positive_label)
-#    for i, (_, rule) in enumerate(rule_branch):
-#        if rule["index"] in [index for (index, _) in positive_label]:
-#            rule
-        
-    
 
 def main(args):
 
@@ -61,42 +47,49 @@ def main(args):
 
     ### 
 
-    compotree = composition_tree_2(nclasses, window, labels, iteration_max=100000000)
+    compotree = composition_tree_3(nclasses, window, labels, iteration_max=100000000)
     compotree.fit(features, classes)
     
     compositions = compotree.rules_per_class()
     for i, rules in enumerate(compositions):
         print("class", i, composition_known[i] )
         for j, rule_branch in enumerate(rules):
-            pruning_branch_rule(rule_branch)
-            print("support:", rule_branch[0][0])
-            for k, (n, r) in enumerate(rule_branch):
+            #pruning_branch_rule(rule_branch, window)
+            #print("support:", rule_branch[0][0])
+            for k, (n, r, uuid) in enumerate(rule_branch):
                 print(r["rule"], end=" ")
                 print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
             print("OR" if j < len(rules)-1 else "" )
         print("#####")
-    
-    #inclusive_branch = compotree.inclusive_branch()
+   
+    #compotree.merge_branches_per_class()
+ 
+    #compositions = compotree.rules_per_class()
+    #for i, rules in enumerate(compositions):
+    #    print("class", i, composition_known[i] )
+    #    for j, rule_branch in enumerate(rules):
+    #        #pruning_branch_rule(rule_branch, window)
+    #        #print("support:", rule_branch[0][0])
+    #        for k, (n, r, uuid) in enumerate(rule_branch):
+    #            print(r["rule"], end=" ")
+    #            print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+    #        print("OR" if j < len(rules)-1 else "" )
+    #    print("#####")
      
-    #print(inclusive_branch[0].classes)
-    #inclusive_branch = inclusive_branches[0]
-    #for ib in inclusive_branches:
-    #print([(list(set(n.classes)), n.gini, n.split_rule["rule"]) for n in inclusive_branch if n.split_rule])
-    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 0) 
-    #print(pc, isclass)
-    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 1) 
-    #print(pc, isclass)
-    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 2) 
-    #print(pc, isclass)
-    #pc, isclass = compotree.is_class(["N", "PN", "N", "N"], 3) 
-    #print(pc, isclass)
-    #class_found = compotree.predict(["N", "PN", "N", "N"]) 
-    #print(class_found)
-    #leaves = compotree.get_leaves()
-    #for leaf in leaves:
-    #    #c = max(set(leaf.classes), key = leaf.classes.count)
-    #    print(leaf.gini) 
-    #    print(np.histogram(leaf.classes, bins=list(range(nclasses))))
+    compotree.prune_branches_per_class()
+    
+    compositions = compotree.branches
+    for i, rules in enumerate(compositions):
+        print("class", i, composition_known[i] )
+        for j, rule_branch in enumerate(rules):
+            #print("support:", rule_branch[0][0])
+            for k, node in enumerate(rule_branch):
+                rule = node.split_rule
+                print(rule["rule"], end=" ")
+                print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+            print("OR" if j < len(rules)-1 else "" )
+        print("#####")
+   
     
     
 if __name__ == '__main__':
