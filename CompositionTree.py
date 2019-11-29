@@ -79,10 +79,14 @@ class node_tree():
         d = {"features": self.features, "classes": self.classes, "gini": self.gini, "id": self.id, "parent": self.parent, "split_rule": self.split_rule, "active":self.active}
         return d
 
+ 
+
+
 class branch_tree():
-    def __init__(self, nodes, nfeat):
+    def __init__(self, nodes, nfeat, nclasses):
         self.nodes = copy.deepcopy(nodes)
         self.nfeat = nfeat
+        self.nclasses = nclasses
     def set_nodes(self, nodes):
         self.nodes = copy.deepcopy(nodes)
     def delete_node(self, node):
@@ -110,7 +114,58 @@ class branch_tree():
                             rule["features"][i] = v["labels"]
                             rule["conditions"][i] = True
                     rule["rule"] = construct_rulestr(rule["features"], rule["conditions"], rule["indices"])
-        
+    
+    def get_parent(self, id):
+        for node in [n for n in self.nodes if n.active]:
+            if node.id == id:
+                return node
+        return None
+    def get_children(self, id):
+        root = self.get_root()
+        for node in [n for n in self.nodes if n.active]:
+            if not node == root and node.parent == id:
+                return node
+        return None 
+    def get_root(self):
+        for node in [n for n in self.nodes if n.active]:
+            if node.id == node.parent:
+                return node
+        return None 
+    def get_leaf(self):
+        for node in [n for n in self.nodes if n.active]:
+            if self.get_children(node.id) is None:
+                return node
+    def branch_descent(self):
+        descent = [self.get_root()]
+        leaf = self.get_leaf()
+        while not descent[-1] is leaf:
+            descent.append(self.get_children(descent[-1].id))    
+        return lnodes
+
+    def merge_two_branches(self, branch):
+        bd1 = self.branch_descent()
+        bd2 = branch.branch_descent()
+        merge = [] 
+        if not len(bd1) == len(bd2):
+            return None
+        else:
+            for n1, n2 in zip(bd1, bd2):
+                if n1.id == n2.id:
+                    merge.append(n1)
+                elif n1.split_rule["features"] == n2.split_rule["features"] and simplification(n1.split_rule["conditions"], n2.split_rule["conditions"]):
+                    index_to_keep = simplification(n1.split_rule["conditions"], n2.split_rule["conditions"])
+                    feat = n1.split["features"][index_to_keep]
+                    cond = n1.split["conditions"][index_to_keep]
+                    classes = n1.classes + n2.classes
+                    features = n1.features + n2.features
+                    gini = gini_impurity(classes, self.nclasses)
+                    strrule = construct_rulestr(feat, cond, index_to_keep)
+                    split_rule = {"features": feat, "conditions": cond  }
+                    #node_tree( features, classes, gini, n1.parent, split_rule_types[i]))
+                 
+        return branch 
+
+
 
 class composition_tree_3():
     def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10000):
@@ -126,7 +181,8 @@ class composition_tree_3():
         self.rules = []
         self.root = None
         self.iteration_max = iteration_max
-        
+        self.merging = False 
+        self.epsilon = 10e-6
     def split(self, node):
         features = node.features
         classes = node.classes
@@ -151,44 +207,46 @@ class composition_tree_3():
                         conds_types.append([cond1, cond2]) 
                         feats_types.append([f1, f2]) 
                         index_types.append([index, index+1]) 
-                    
-                    #### following commented code relies on merging branch during split (seems to not be very interesting... post merging seems to be better)
-                    #c_types = [np.unique(st) for st in split_types]
-                    #m_split_types = split_types 
-                    #l_split_types = label_types 
-                    #a_split_types = [True for _ in split_types]
-                    #c_split_types = conds_types
-                    #f_split_types = feats_types
-                    #i_split_types = index_types
-                    ## merging identical split
-                    #for (i, j) in itertools.combinations(range(len(c_types)), 2):
-                    #    ct1 = c_types[i]
-                    #    ct2 = c_types[j]
-                    #    st1 = split_types[i]
-                    #    st2 = split_types[j]
-                    #    la1 = label_types[i]
-                    #    la2 = label_types[j]
-                    #    co1 = conds_types[i] 
-                    #    co2 = conds_types[j] 
-                    #    fe1 = feats_types[i] 
-                    #    in1 = index_types[i] 
-                    #    #print("testing", ct1, ct2)
-                    #    if len(ct1) == 1 and len(ct2)==1 and ct1 == ct2 and simplification(co1, co2):
-                    #        a_split_types[i] = False
-                    #        a_split_types[j] = False
-                    #        new = simplification(co1, co2)
-                    #        c_split_types.append([co1[new]])
-                    #        f_split_types.append([fe1[new]])
-                    #        i_split_types.append([in1[new]])
-                    #        m_split_types.append(st1+st2)
-                    #        l_split_types.append(la1+la2)
-                    #        a_split_types.append(True)
-                    #        
-                    #split_types = [st for at, st in zip(a_split_types, m_split_types) if at ] 
-                    #label_types = [la for at, la in zip(a_split_types, l_split_types) if at ] 
-                    #feats_types = [ft for at, ft in zip(a_split_types, f_split_types) if at ] 
-                    #conds_types = [ct for at, ct in zip(a_split_types, c_split_types) if at ] 
-                    #index_types = [it for at, it in zip(a_split_types, i_split_types) if at ] 
+                    #### merging branches if they contained pure node (seems to not be very interesting... post merging seems to be better)
+                    if self.merging:
+                        c_types = [np.unique(st) for st in split_types]
+                        g_types = [gini_impurity(st, self.nclasses) for st in split_types] 
+                        m_split_types = split_types 
+                        l_split_types = label_types 
+                        a_split_types = [True for _ in split_types]
+                        c_split_types = conds_types
+                        f_split_types = feats_types
+                        i_split_types = index_types
+                        # merging identical split
+                        for (i, j) in itertools.combinations(range(len(c_types)), 2):
+                            if True or g_types[i] < self.epsilon and g_types[j] < self.epsilon:
+                                ct1 = c_types[i]
+                                ct2 = c_types[j]
+                                st1 = split_types[i]
+                                st2 = split_types[j]
+                                la1 = label_types[i]
+                                la2 = label_types[j]
+                                co1 = conds_types[i] 
+                                co2 = conds_types[j] 
+                                fe1 = feats_types[i] 
+                                in1 = index_types[i] 
+                                #print("testing", ct1, ct2)
+                                if len(ct1)==1 and len(ct2)==1 and ct1 == ct2 and simplification(co1, co2):
+                                    a_split_types[i] = False
+                                    a_split_types[j] = False
+                                    new = simplification(co1, co2)
+                                    c_split_types.append([co1[new]])
+                                    f_split_types.append([fe1[new]])
+                                    i_split_types.append([in1[new]])
+                                    m_split_types.append(st1+st2)
+                                    l_split_types.append(la1+la2)
+                                    a_split_types.append(True)
+                                
+                        split_types = [st for at, st in zip(a_split_types, m_split_types) if at ] 
+                        label_types = [la for at, la in zip(a_split_types, l_split_types) if at ] 
+                        feats_types = [ft for at, ft in zip(a_split_types, f_split_types) if at ] 
+                        conds_types = [ct for at, ct in zip(a_split_types, c_split_types) if at ] 
+                        index_types = [it for at, it in zip(a_split_types, i_split_types) if at ] 
                     g_types = [gini_impurity(st, self.nclasses) for st in split_types]
                     
                     g = 0
@@ -236,6 +294,7 @@ class composition_tree_3():
             n += 1
             index += 1
         print("fit stopped:", n, " iterations - ", len(self.tree), " nodes" )
+        self.branches = self.branches_per_class() 
          
     def prune_branches_per_class(self):
         branches_per_class = self.branches_per_class() 
@@ -250,9 +309,10 @@ class composition_tree_3():
         self.branches = pruned_branches_per_class
 
     def merge_branches_per_class(self):
-        branches_per_class = self.branches_per_class()
+        branches_per_class = self.branches
+        merged_branches_per_class = []
         for c, branches in enumerate(branches_per_class):
-            for i, branch1 in enumerate(branches):
+            for branch1, branch2 in itertools.compositions(branches):
                 for j, branch2 in [(i+1+n, branches[i+1+n]) for n in range(len(branches)-(i+1))]:
                     for k, node1 in enumerate([branch1[0]]):
                         for l, node2 in enumerate([branch2[0]]):
@@ -688,6 +748,212 @@ class composition_tree_2():
                 del self.tree[i]
     
 
+class composition_tree_0():
+    def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10000):
+        self.nclasses = nclasses
+        self.nfeat = nfeat
+        if labels:
+            self.labels = labels
+        else:
+            self.labels = list(range(nfeat))
+        self.tree = []
+        self.branches = []
+        self.queue = []
+        self.rules = []
+        self.root = None
+        self.iteration_max = iteration_max
+        
+    def split(self, node):
+        features = node.features
+        classes = node.classes
+        parent = node.parent
+        gini_orig = node.gini
+        split_rule_type1 = []
+        split_rule_type2 = []
+        split_rule_type3 = []
+        split_rule_type4 = []
+        classes_type1 = []
+        classes_type2 = []
+        classes_type3 = []
+        classes_type4 = []
+        features_type1 = []
+        features_type2 = []
+        features_type3 = []
+        features_type4 = []
+        gini_type1 = 0
+        gini_type2 = 0
+        gini_type3 = 0
+        gini_type4 = 0
+        N = len(classes)
+        gain_gini = 0
+        for index in range(self.nfeat):
+            for f1 in self.labels: #range(self.nclasses):
+                split_type1 = [c for f, c in zip(features, classes) if f[index] == f1 ]
+                split_type2 = [c for f, c in zip(features, classes) if not f[index] == f1 ]
+                g_type1 = gini_impurity(split_type1, self.nclasses)
+                g_type2 = gini_impurity(split_type2, self.nclasses)
+                g = 0
+                g += g_type1 * (len(split_type1)/N) 
+                g += g_type2 * (len(split_type2)/N) 
+                gain = gini_orig - g
+                if gain > gain_gini :
+                    gain_gini = gain
+                    gini_type1 = g_type1
+                    gini_type2 = g_type2
+                        
+                    split_rule_type1 = {"index":index, "feature":f1, "condition": True, "rule":"" +str(f1)+"_"+str(index)}     
+                    split_rule_type2 = {"index":index, "feature":f1, "condition": False, "rule":"not("+str(f1)+"_"+str(index)+")"}     
+                    classes_type1 = split_type1
+                    classes_type2 = split_type2
+                        
+                                                
+                    features_type1 = [f for f in features if f[index] == f1]
+                    features_type2 = [f for f in features if not f[index] == f1]
+        node_type1 = node_tree(features_type1, classes_type1, gini_type1, node.id, split_rule_type1)
+        node_type2 = node_tree(features_type2, classes_type2, gini_type2, node.id, split_rule_type2)
+        return [node_type1, node_type2], gain_gini
+
+    def fit(self, features, classes):
+        self.features = features
+        self.classes = classes
+        gini = gini_impurity(classes, self.nclasses)
+        root = node_tree(features, classes, gini, 0, None)
+        root.set_parent(root.id)
+        self.root = root
+        self.tree = [ root ]
+        self.queue = [ root ]
+        n = 0
+        index = 0
+        while not len(self.queue) == 0 and n < self.iteration_max:
+            node = self.queue.pop(0)
+            nodes, gain_gini = self.split(node)
+            for n_ in nodes:
+                self.tree.append( n_ ) 
+            if gain_gini > 0:
+                #print(gain_gini)
+                for n_ in nodes:
+                    if n_.gini > 0:
+                        #print(" ", n_.gini)
+                        self.queue.append(n_)
+            n += 1
+            index += 1
+        print("fit stopped:", n, " iterations - ", len(self.tree), " nodes" )
+        self.rules = self.rules_per_class()
+        self.branches = self.branches_per_class()
+        
+    def prune_branches_per_class(self):
+        branches_per_class = self.branches_per_class()
+        bpc = copy.deepcopy(branches_per_class)
+        #for c, branches in enumerate(branches_per_class):
+        #    for i, branch in enumerate(branches):
+        #        for j, n1 in enumerate(branch):
+        #            for k, n2 in enumerate(branch):
+        #                if not n1.id == n2.id:
+        #                    if n1.split_rule["rule"] == n2.split_rule["rule"]:
+        #                        #print(c, "duplicate rule", n2.split_rule["rule"])
+        #                        bpc[c][i][k] = None
+         
+        
+        for c, branches in enumerate(branches_per_class):
+            for i, branch in enumerate(branches):
+                rules = {}
+                for j in range(self.nfeat):
+                    rules[j] = None
+                for node in branch:
+                    rule = node.split_rule
+                    if rule["condition"] == True:
+                        rules[rule["index"]] = { "label" : rule["feature"],
+                                              "condition": rule["condition"] }
+                for k, v in rules.items():
+                    if not v == None:
+                        for j, node in enumerate(branch):
+                            rule = node.split_rule
+                            if rule["index"] == k and rule["condition"] == False:
+                                #print("removing the node ", rule["rule"] ," due to an existing positive rule at the same index:", v)
+                                bpc[c][i][j] = None
+         
+        return bpc
+    
+    def branches_per_class(self):
+        leaves = self.get_leaves()
+        branches = [(l.classes, self.get_branch(l)) for l in leaves]
+        branches_per_class = [[] for _ in range(self.nclasses)]
+        for i, (classes, branch) in enumerate(branches):
+            if not len(classes) == 0:
+                c = max(set(classes), key = classes.count)
+                listofnodes = [ n for n in branch if n.split_rule]
+                branches_per_class[c].append(listofnodes)
+        return branches_per_class
+
+ 
+    def composition(self):
+        leaves = self.get_leaves()
+        branches = [(l.classes, self.get_branch(l)) for l in leaves]
+        rules_per_class = [[] for _ in range(self.nclasses)]
+        for i, (classes, branch) in enumerate(branches):
+            if not len(classes) == 0:
+                c = max(set(classes), key = classes.count)
+                listofrule = [(len(n.classes), n.split_rule["rule"]) for n in branch if n.split_rule]
+                rules_per_class[c].append(listofrule)
+        return rules_per_class
+
+    def rules_per_class(self):
+        leaves = self.get_leaves()
+        branches = [(l.classes, self.get_branch(l)) for l in leaves]
+        rules_per_class = [[] for _ in range(self.nclasses)]
+        b = []
+        for i, (classes, branch) in enumerate(branches):
+            if not len(classes) == 0:
+                c = max(set(classes), key = classes.count)
+                listofrule = [ (len(n.classes), n.split_rule, n.id) for n in branch if n.split_rule]
+                rules_per_class[c].append(listofrule)
+        return rules_per_class
+ 
+   
+    def predict(self, feat):
+        predicted_class = []
+        for c in range(len(self.rules)):
+            ic = self.is_class(feat, c)    
+            predicted_class.append(ic)
+        return predicted_class
+
+    def get_root(self):
+        for node in self.tree:
+            if node.id == node.parent:     
+                return node 
+    def get_parent(self, id):
+        for node in self.tree:
+            if node.id == id:
+                return node
+    def get_childrens(self, id):
+        childrens = []
+        for node in self.tree:
+            if not node == self.root and node.parent == id:
+                childrens.append(node)
+        return childrens
+    def get_branch(self, leaf):
+        branch = [leaf]
+        node = leaf 
+        while not node == self.root :
+            node = self.get_parent(node.parent)
+            branch.append(node)
+        return branch
+    def get_leaves(self):
+        leaves = []
+        for node in self.tree:
+            if node.gini == 0:
+                leaves.append(node)
+            else:
+                childrens = self.get_childrens(node.id)
+                if len(childrens) == 0:
+                    leaves.append(node)
+        return leaves 
+
+    def delete_node(self, node):
+        for i, _node in enumerate(self.tree):
+            if _node.id == node.id:
+                del self.tree[i]
+ 
 class composition_tree():
     def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10000, epsilon = 1e-6):
         self.nclasses = nclasses

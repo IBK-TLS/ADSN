@@ -23,7 +23,7 @@ def main(args):
     labels=["N", "A", "B", "PP", "PN"]
     nlabels = len(labels)
     nclasses = len(composition_known)
-    window = 4
+    window = 8
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
@@ -55,7 +55,7 @@ def main(args):
         print("class", i, composition_known[i] )
         for j, rule_branch in enumerate(rules):
             #pruning_branch_rule(rule_branch, window)
-            #print("support:", rule_branch[0][0])
+            print("support:", rule_branch[0][0])
             for k, (n, r, uuid) in enumerate(rule_branch):
                 print(r["rule"], end=" ")
                 print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
