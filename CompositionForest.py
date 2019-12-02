@@ -11,7 +11,14 @@ def simplification(c1, c2):
     string = str(int(c1[0]))+str(int(c1[1]))+str(int(c2[0]))+str(int(c2[1]))
     return dict_implication[string]
 
+def list_of_combination(labels, len_window):
+    listofcombinations = []
+    for l in range(len_window):
+        listofcombinations += [ list(c) for c in list(itertools.product(labels, repeat=l+1)) ]
+    return listofcombinations
 
+def islistinlist(s, l):
+    return True in [ s==sl for sl in  [l[index:index+len(s)] for index in range(len(l)-len(s)+1) ] ]
 
 
 def rule_horizontal_pruning(rules):
@@ -201,26 +208,25 @@ class composition_tree():
         gini_false = 0
         N = len(classes)
         gain_gini = 0
-        for f1 in self.labels: #range(self.nclasses):
-            for f2 in self.labels: #range(self.nclasses):
-                split_true = [c for f, c in zip(features, classes) if set([f1, f2]).issubset(f)]
-                split_false = [c for f, c in zip(features, classes) if not set([f1, f2]).issubset(f)]
-                g_true = gini_impurity(split_true, self.nclasses)
-                g_false = gini_impurity(split_false, self.nclasses)
-                g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
-                gain = gini_orig - g
-                #print(gain)
-                if gain > gain_gini :
-                    gain_gini = gain
-                    gini_true = g_true
-                    gini_false = g_false
-                    split_rule_true = {"features":[f1, f2], "conditions": True, "rule" :  str(f1) + "." + str(f2) }     
-                    split_rule_false = {"features":[f1, f2], "conditions": False, "rule" :   "not("+ str(f1) + "." + str(f2) + ")" }     
-                    classes_true = split_true
-                    classes_false = split_false 
+        for comb in list_of_combination(self.labels, self.nfeat):
+            split_true = [c for f, c in zip(features, classes) if islistinlist(comb,f)]
+            split_false = [c for f, c in zip(features, classes) if not islistinlist(comb,f)]
+            g_true = gini_impurity(split_true, self.nclasses)
+            g_false = gini_impurity(split_false, self.nclasses)
+            g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
+            gain = gini_orig - g
+            #print(gain)
+            if gain > gain_gini :
+                gain_gini = gain
+                gini_true = g_true
+                gini_false = g_false
+                split_rule_true = {"features":comb, "conditions": True, "rule" :  str(comb) }     
+                split_rule_false = {"features":comb, "conditions": False, "rule" :   "not("+ str(comb) + ")" }     
+                classes_true = split_true
+                classes_false = split_false 
                         
-                    features_true = [f for f in features if set([f1, f2]).issubset(f)]
-                    features_false = [f for f in features if not set([f1, f2]).issubset(f)]
+                features_true = [f for f in features if islistinlist(comb, f)]
+                features_false = [f for f in features if not islistinlist(comb,f)]
         node_true = node_tree(features_true, classes_true, gini_true, node.id, split_rule_true)
         node_false = node_tree(features_false, classes_false, gini_false, node.id, split_rule_false)
         return node_true, node_false, gain_gini
