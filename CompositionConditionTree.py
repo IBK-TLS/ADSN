@@ -17,53 +17,56 @@ def list_of_combination(labels, len_window):
         listofcombinations += [ list(c) for c in list(itertools.product(labels, repeat=l+1)) ]
     return listofcombinations
 
-def list_of_possible_combination(features):
+def list_of_possible_combination(features, max_size=10):
     listofcombinations = []
     for f in features:
         i = len(f)//2
-         
-        for w in range(len(f[i:])):
+        for w in range( min(len(f[i:]), max_size//2) ):
             listofcombinations.append(f[i-w-1:i+w+2])
 
     return listofcombinations 
-        
-    
+
+def list_of_possible_conditions(values):
+    listofconditions = []
+    for v in values:
+        cond = list(np.argsort(v))
+        conditions = list( itertools.combinations(cond, 2) )
+        for c in conditions:
+            listofconditions.append(c)            
+
+    return listofconditions
+         
+def list_of_possible_condition_combination(features, values):
+    listofcombinations = []
+    for f, v  in zip(features, values):
+        i = len(f)//2
+        for w in range(len(f[i:])):
+            wv = v[i-w-1: i+w+2]
+            wf = f[i-w-1:i+w+2] 
+            conditions = list( itertools.combinations(list(np.argsort(wv)), 2) )
+            for cond in conditions:
+                listofcombinations.append((wf, cond))
+    return listofcombinations 
+   
 def islistinlist(s, l):
     return True in [ s==sl for sl in  [l[index:index+len(s)] for index in range(len(l)-len(s)+1) ] ]
 
+def whereislistinlist(s, l):
+    indices = [ i for i, sl in  enumerate( [l[index:index+len(s)] for index in range(len(l)-len(s)+1) ] ) if s==sl ]
+    return indices[0]
 
-def rule_horizontal_pruning(rules):
-    for j, rule_branch in enumerate(rules):
-        print("support:", rule_branch[0][0])
-        for k, (n, r) in enumerate(rule_branch):
-            print(r, end=" ")
-            print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
-        print("OR" if j < len(rules)-1 else "" )
+def listwhereislistinlist(s, l, v):
+    indices = [ i for i, sl in  enumerate( [l[index:index+len(s)] for index in range(len(l)-len(s)+1) ] ) if s==sl ]
+    if len(indices) > 0:
+        return v[indices[0]:indices[0]+len(s)] # just return the first occurence
+    else:
+        return []
 
-
-def construct_rulestr(feat, cond, ind):
-    string = ""
-    for f, c, i in zip(feat, cond, ind):
-        sc = "" if c is True else "not("
-        ec = "" if c is True else ")"
-        string += sc+f+"_"+str(i)+ec+"."
-
-    return string[:-1] # remove the last "." char
-
-def rule2str(rule):
-    
-    cond1 = "" if rule["conditions"][0] is None else "not(" if not(rule["conditions"][0]) else ""
-    endcond1 = "" if rule["conditions"][0] is None else ")" if not(rule["conditions"][0]) else ""
-
-    cond2 = "" if rule["conditions"][1] is None else ".not(" if not(rule["conditions"][1]) else "."
-    endcond2 = "" if rule["conditions"][1] is None else ")" if not(rule["conditions"][1]) else ""
-    feat1 = "" if rule["features"][0] is None else rule["features"][0]
-    i1 = "" if rule["features"][0] is None else "_"+str(rule["index"])
-    feat2 = "" if rule["features"][1] is None else rule["features"][1]
-    i2 = "" if rule["features"][1] is None else "_"+str(rule["index"]+1)
-    
-    return cond1+feat1+i1+endcond1+cond2+feat2+i2+endcond2
-    
+def checkcondition(v, c):
+    return c in list( itertools.combinations(list(np.argsort(v)), 2) )
+       
+        
+        
 
 def gini_impurity(data, nclasses):
     prob = [0. for _ in  range(nclasses)]
@@ -84,9 +87,10 @@ def gini_impurity(data, nclasses):
     return np.sum(prob*(1-prob))
 
 class node_tree():
-    def __init__(self, features, classes, gini, parent, split_rule, active=True):
+    def __init__(self, features, values, classes, gini, parent, split_rule, active=True):
         self.features = features
         self.classes = classes
+        self.values = values
         self.gini = gini
         self.parent = parent
         self.split_rule = split_rule
@@ -94,6 +98,8 @@ class node_tree():
         self.active = active
     def set_features(self, features):    
         self.features = features
+    def set_values(self, values):    
+        self.values = values
     def set_classes(self, classes): 
         self.classes = classes
     def set_gini(self, gini):
@@ -107,7 +113,7 @@ class node_tree():
     def deactivate(self):    
         self.active = False
     def dict(self):
-        d = {"features": self.features, "classes": self.classes, "gini": self.gini, "id": self.id, "parent": self.parent, "split_rule": self.split_rule, "active":self.active}
+        d = {"features": self.features, "values": self.values,  "classes": self.classes, "gini": self.gini, "id": self.id, "parent": self.parent, "split_rule": self.split_rule, "active":self.active}
         return d
 
  
@@ -199,7 +205,7 @@ class branch_tree():
 
 
 
-class composition_tree():
+class composition_condition_tree():
     def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10000, epsilon = 1e-6):
         self.nclasses = nclasses
         self.nfeat = nfeat
@@ -216,52 +222,77 @@ class composition_tree():
 
     def split(self, node):
         features = node.features
+        values= node.values
         classes = node.classes
         parent = node.parent
         gini_orig = node.gini
+        nodes = []
         split_rule_true = []
         split_rule_false = []
         classes_true = []
         classes_false = []
+        classes_true_true = []
+        classes_true_false = []
         features_true = []
         features_false = []
+        features_true_true = []
+        features_true_false = []
+        values_true_true = []
+        values_true_false = []
         gini_true = 0
         gini_false = 0
         N = len(classes)
         gain_gini = 0
         best_comb = []
         features_with_anomaly = [f for f,c in zip(features, classes) if c != 0  ]
-        print(len(features_with_anomaly))
-        for comb in list_of_possible_combination(features_with_anomaly):
-        #for comb in list_of_combination(self.labels, self.nfeat):
-            split_true = [c for f, c in zip(features, classes) if islistinlist(comb,f)]
+        values_with_anomaly = [v for f, v,c in zip(features, values, classes) if c != 0  ]
+        for comb, cond in list_of_possible_condition_combination(features_with_anomaly, values_with_anomaly):
+            split_true_true = [c for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and checkcondition( listwhereislistinlist(comb, f, v), cond )]
+            split_true_false = [c for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and not checkcondition( listwhereislistinlist(comb, f, v), cond )]
             split_false = [c for f, c in zip(features, classes) if not islistinlist(comb,f)]
-            g_true = gini_impurity(split_true, self.nclasses)
+            g_true_true = gini_impurity(split_true_true, self.nclasses)
+            g_true_false = gini_impurity(split_true_false, self.nclasses)
             g_false = gini_impurity(split_false, self.nclasses)
-            g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
+            g = ( g_true_true * (len(split_true_true)/N)+ g_true_false * (len(split_true_false)/N)  + g_false * (len(split_false)/N) )
             gain = gini_orig - g
-            print(comb, gain, end="\r")
+            print(comb, gain)
             if gain > gain_gini :#or (gain == gain_gini and len(comb) > len(best_comb)) :
                 gain_gini = gain
-                gini_true = g_true
+                gini_true_true = g_true_true
+                gini_true_false = g_true_false
                 gini_false = g_false
                 best_comb = comb
-                split_rule_true = {"features":comb, "conditions": True, "rule" :  str(comb) }     
+                split_rule_true_true = {"features": [comb, cond], "conditions": [True, True], "rule" :  str(comb) + " and " + str(cond)}     
+                split_rule_true_false = {"features":[comb, cond], "conditions": [True, False], "rule" :  str(comb) + " and not(" + str(cond) + ")" }     
                 split_rule_false = {"features":comb, "conditions": False, "rule" :   "not("+ str(comb) + ")" }     
-                classes_true = split_true
+
+                classes_true_true = split_true_true
+                classes_true_false = split_true_false
                 classes_false = split_false 
                         
-                features_true = [f for f in features if islistinlist(comb, f)]
-                features_false = [f for f in features if not islistinlist(comb,f)]
-        node_true = node_tree(features_true, classes_true, gini_true, node.id, split_rule_true)
-        node_false = node_tree(features_false, classes_false, gini_false, node.id, split_rule_false)
-        return node_true, node_false, gain_gini
+                features_true_true = [f for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and checkcondition( listwhereislistinlist(comb, f, v), cond )]
+                features_true_false = [f for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and not checkcondition( listwhereislistinlist(comb, f, v), cond )]
+                features_false = [f for f, c in zip(features, classes) if not islistinlist(comb,f)]
 
-    def fit(self, features, classes):
+                values_true_true = [v for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and checkcondition( listwhereislistinlist(comb, f, v), cond )]
+                values_true_false = [v for f, v, c in zip(features, values, classes) if islistinlist(comb,f) and not checkcondition( listwhereislistinlist(comb, f, v), cond )]
+                values_false = [v for f,v, c in zip(features, values, classes) if not islistinlist(comb,f)]
+
+        node_true_true =  node_tree(features_true_true, values_true_true, classes_true_true, gini_true_true, node.id, split_rule_true_true)
+        node_true_false =  node_tree(features_true_false, values_true_false, classes_true_false, gini_true_false, node.id, split_rule_true_false)
+        node_false = node_tree(features_false, values_false, classes_false, gini_false, node.id, split_rule_false)
+
+        print("OHLIHO", len(classes_false), len(classes_true_true), len(classes_true_false), len(classes))
+
+        return node_true_true, node_true_false, node_false, gain_gini
+
+
+    def fit(self, features, values, classes):
         self.features = features
         self.classes = classes
+        self.values = values
         gini = gini_impurity(classes, self.nclasses)
-        root = node_tree(features, classes, gini, 0, None)
+        root = node_tree(features, values,  classes, gini, 0, None)
         root.set_parent(root.id)
         self.root = root
         self.tree = [ root ]
@@ -270,18 +301,20 @@ class composition_tree():
         index = 0
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
-            node_true, node_false, gain_gini = self.split(node)
-            print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
-            if len(node_true.classes)>0:
-                self.tree.append( node_true ) 
-            if len(node_false.classes)>0:
-                self.tree.append( node_false ) 
+            ntt, ntf, nf, gain_gini = self.split(node)
+            splitted_nodes = [nf, ntt, ntf]
+
+            for n_ in splitted_nodes:
+               print(gain_gini, [x for i, x in enumerate(n_.classes) if i == n_.classes.index(x)], [x for i, x in enumerate(n_.classes) if i == n_.classes.index(x)])
+
+            for n_ in splitted_nodes:
+                if len(n_.classes)>0:
+                    self.tree.append( n_ ) 
             
             if gain_gini > self.epsilon:
-                if node_true.gini > self.epsilon and len(node_true.classes) >0:
-                    self.queue.append(node_true)
-                if node_false.gini > self.epsilon and len(node_false.classes) > 0:
-                    self.queue.append(node_false)
+                for n_ in splitted_nodes:
+                    if n_.gini > self.epsilon and len(n_.classes) >0:
+                        self.queue.append(n_)
             n += 1
             index += 1
         self.rules = self.rules_per_class()
@@ -386,41 +419,6 @@ class composition_tree():
         return leaves 
     
     
-class inclusive_composition_tree():
-    def __init__(self, nclasses=2, nfeat=2, labels=None, iteration_max=10, epsilon = 1e-6):
-        self.trees = []
-        self.nclasses = nclasses
-        self.nfeat = nfeat
-        self.labels = labels
-        self.iteration_max = iteration_max
-        self.epsilon = epsilon
-        self.features = []
-        self.classes = []
-        self.inclusive_branches = []
-
-    def fit(self, features, classes):
-        self.features = features
-        self.classes = classes
-        
-        feat_ = self.features 
-        class_ = self.classes
-        n=0
-        while len(feat_) > 0 and n < self.iteration_max:
-            print(n , len(feat_), list(set(class_)) )
-            compotree = composition_tree(self.nclasses, self.nfeat, self.labels)
-            compotree.fit(feat_, class_)
-            inclusive_branch = compotree.inclusive_branch()[0]
-            feat_ib = inclusive_branch[0].features
-            class_ib = inclusive_branch[0].classes
-            self.inclusive_branches.append(inclusive_branch)
-            self.trees.append(compotree)
-            c = list(set(class_ib))
-            print("  ", c, [n.split_rule["rule"] for n in inclusive_branch if n.split_rule ])    
-            print("    ", feat_ib, class_ib)
-            feat_ = [f for f in feat_ if not f in feat_ib]
-            class_ = [c for (c,f) in zip(class_, feat_) if not f in feat_ib]
-            n += 1    
-
 
 ### MAIN ###
 
