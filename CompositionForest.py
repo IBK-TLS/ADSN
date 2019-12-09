@@ -288,7 +288,7 @@ class composition_tree():
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
             node_true, node_false, gain_gini = self.split(node)
-            print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
+            #print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
             if len(node_true.classes)>0:
                 self.tree.append( node_true ) 
             if len(node_false.classes)>0:
@@ -680,7 +680,7 @@ class condition_tree():
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
             node_true, node_false, gain_gini = self.split(node)
-            print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
+            #print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
             if len(node_true.classes)>0:
                 self.tree.append( node_true ) 
             if len(node_false.classes)>0:

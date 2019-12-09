@@ -68,6 +68,7 @@ def main(args):
     impure_features = []
     impure_classes = []
     impure_values = []
+    impure_infos = []
 
     for i, rules in enumerate(compositions):
         print("class", i )
@@ -75,11 +76,11 @@ def main(args):
             #pruning_branch_rule(rule_branch, window)
             setclasses =[x for i, x in enumerate(rule_branch[0].classes) if i == rule_branch[0].classes.index(x)]
             if len(setclasses) > 1:
-                impure_features += rule_branch[0].features
-                impure_values += rule_branch[0].values
-                impure_classes += rule_branch[0].classes
-    
-            print("support:", len(rule_branch[0].classes), setclasses)
+                impure_features.append(rule_branch[0].features)
+                impure_values.append(rule_branch[0].values)
+                impure_classes.append(rule_branch[0].classes)
+                impure_infos.append([i, j, setclasses]) 
+            print("support:", len(rule_branch[0].classes), i, j, setclasses)
             for k, r in enumerate(rule_branch):
                 print(r.split_rule["rule"], end=" ")
                 print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
@@ -112,21 +113,22 @@ def main(args):
 #            print("OR" if j < len(rules)-1 else "" )
 #        print("#####")
 
-    conditree = condition_tree(nclasses, window, labels, iteration_max=100000000)
-    conditree.fit(impure_features, impure_values, impure_classes)
-    compositions = conditree.conditions()
-
-    for i, rules in enumerate(compositions):
-        print("class", i )
-        for j, rule_branch in enumerate(rules):
-            #pruning_branch_rule(rule_branch, window)
-            setclasses =[x for i, x in enumerate(rule_branch[0].classes) if i == rule_branch[0].classes.index(x)]
-            print("support:", len(rule_branch[0].classes), setclasses)
-            for k, r in enumerate(rule_branch):
-                print(r.split_rule["rule"], end=" ")
-                print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
-            print("OR" if j < len(rules)-1 else "" )
-        print("#####")
+    for ifeat, ival, iclas, infos in zip(impure_features, impure_values, impure_classes, impure_infos):
+        conditree = condition_tree(nclasses, window, labels, iteration_max=100000000)
+        conditree.fit(ifeat, ival, iclas)
+        compositions = conditree.conditions()
+        print(infos)
+        for i, rules in enumerate(compositions):
+            print("class", i )
+            for j, rule_branch in enumerate(rules):
+                #pruning_branch_rule(rule_branch, window)
+                setclasses =[x for i, x in enumerate(rule_branch[0].classes) if i == rule_branch[0].classes.index(x)]
+                print("support:", len(rule_branch[0].classes), setclasses)
+                for k, r in enumerate(rule_branch):
+                    print(r.split_rule["rule"], end=" ")
+                    print("AND" if k < len(rule_branch)-1 else "\n", end=" " )
+                print("OR" if j < len(rules)-1 else "" )
+            print("#####")
       
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Composition-based desicion tree utilities.")
