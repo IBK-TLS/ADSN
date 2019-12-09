@@ -17,6 +17,17 @@ def list_of_combination(labels, len_window):
         listofcombinations += [ list(c) for c in list(itertools.product(labels, repeat=l+1)) ]
     return listofcombinations
 
+def list_of_all_possible_combination(features, max_size=10):
+    listofcombinations = []
+    for f in features:
+        for l in np.arange( 2, min(len(f), max_size )):
+            
+            listofcombinations += [ list(c) for c in list(itertools.product(f, repeat=l+1)) if not list(c) in listofcombinations]
+            print(len(listofcombinations))
+    return listofcombinations 
+
+
+
 def list_of_possible_combination(features, max_size=10):
     listofcombinations = []
     for f in features:
@@ -27,13 +38,13 @@ def list_of_possible_combination(features, max_size=10):
     return listofcombinations 
 
 def list_of_possible_pattern(features, max_size=10):
-    listofcombinations = []
+    listofpatterns = []
     for f in features:
+        pattern = [ "+" if d>0 else "-" if d<0 else "=" for d in [f[i+1]-f[i] for i, _ in enumerate(f[:-1]) ]]
         i = len(f)//2
-        for w in range( min(len(f[i:]), max_size//2) ):
-            listofcombinations.append(f[i-w-1:i+w+2])
-
-    return listofcombinations 
+        for w in range( min(len(pattern[i:]), max_size//2) ):
+            listofpatterns.append(pattern[i-w-1:i+w+2])
+    return listofpatterns 
 
 
 def list_of_possible_conditions(values):
@@ -334,31 +345,34 @@ class composition_condition_tree():
         gain_gini = 0
         best_comb = []
         features_with_anomaly = [f for f,c in zip(features, classes) if c != 0  ]
+        #for comb in list_of_all_possible_combination(features_with_anomaly, 5):
         for comb in list_of_possible_combination(features_with_anomaly):
         #for comb in list_of_combination(self.labels, self.nfeat):
             split_true=[c for f, c in zip(features, classes) if islistinlist(comb,f)]
             split_false=[c for f, c in zip(features, classes) if not islistinlist(comb,f)]
-            g_true = gini_impurity(split_true, self.nclasses)
-            g_false = gini_impurity(split_false, self.nclasses)
-            g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
-            gain = gini_orig - g
-            print(comb, gain, len(split_true), len(split_false))
-            if gain > gain_gini :#or (gain == gain_gini and len(comb) > len(best_comb)) :
-                gain_gini = gain
-                gini_true = g_true
-                gini_false = g_false
-                best_comb = comb
-                split_rule_true = {"features":comb, "conditions": True, "rule" :  str(comb) }     
-                split_rule_false = {"features":comb, "conditions": False, "rule" :   "not("+ str(comb) + ")" }     
+            #print(comb)
+            if not (len(split_true) == 0 or len(split_false) == 0):
+                g_true = gini_impurity(split_true, self.nclasses)
+                g_false = gini_impurity(split_false, self.nclasses)
+                g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
+                gain = gini_orig - g
+                if gain > gain_gini :#or (gain == gain_gini and len(comb) > len(best_comb)) :
+                    print(comb, gain, len(split_true), len(split_false))
+                    gain_gini = gain
+                    gini_true = g_true
+                    gini_false = g_false
+                    best_comb = comb
+                    split_rule_true = {"features":comb, "conditions": True, "rule" :  str(comb) }     
+                    split_rule_false = {"features":comb, "conditions": False, "rule" :   "not("+ str(comb) + ")" }     
 
-                classes_true = split_true
-                classes_false = split_false 
+                    classes_true = split_true
+                    classes_false = split_false 
                         
-                features_true = [f for f in features if islistinlist(comb, f)]
-                features_false = [f for f in features if not islistinlist(comb,f)]
+                    features_true = [f for f in features if islistinlist(comb, f)]
+                    features_false = [f for f in features if not islistinlist(comb,f)]
 
-                values_true = [v for f, v in zip(features, values) if islistinlist(comb,f)]
-                values_false = [v for f, v in zip(features, values) if islistinlist(comb,f)]
+                    values_true = [v for f, v in zip(features, values) if islistinlist(comb,f)]
+                    values_false = [v for f, v in zip(features, values) if islistinlist(comb,f)]
 
         node_true =  node_tree(features_true, values_true, classes_true, gini_true, node.id, split_rule_true)
         node_false = node_tree(features_false, values_false, classes_false, gini_false, node.id, split_rule_false)

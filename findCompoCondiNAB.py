@@ -13,7 +13,7 @@ def main(args):
     ### DATA PREPARATION ###
  
     window = 8
-    step = 1  
+    step = 1 
  
     dataset = pd.read_csv(args.dataset)
     features = list(dataset["label"])
@@ -35,8 +35,8 @@ def main(args):
     classes = [0 for _ in range(len(fclasses))]
     
     for i, f in enumerate(fclasses):
-        uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x != 0 and ( 1 < i < len(f)-2 )]
-        #uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x!=0]
+        #uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x != 0 and ( 1 < i < len(f)-2 )]
+        uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x!=0]
         if not len(uniqueclasses) == 0:
             print(i, f, uniqueclasses)
             if len(uniqueclasses) == 1:
