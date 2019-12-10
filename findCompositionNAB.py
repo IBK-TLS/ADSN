@@ -36,8 +36,8 @@ def main(args):
     patterns =  [ ["+" if d>0 else "-" if d<0 else "=" for d in [f[i+1]-f[i] for i, _ in enumerate(f[:-1]) ]] for f in values]
     classes = [0 for _ in range(len(fclasses))]
     for i, f in enumerate(fclasses):
-        uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x != 0 and ( 1 < i < len(f)-2 )]
-        #uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x!=0]
+        #uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x != 0 and ( 1 < i < len(f)-2 )]
+        uniqueclasses = [x for i, x in enumerate(f) if i == f.index(x) and x!=0]
         if not len(uniqueclasses) == 0:
             print(i, f, uniqueclasses)
             if len(uniqueclasses) == 1:
@@ -79,7 +79,7 @@ def main(args):
                 impure_features.append(rule_branch[0].features)
                 impure_values.append(rule_branch[0].values)
                 impure_classes.append(rule_branch[0].classes)
-                impure_infos.append([i, j, setclasses]) 
+                impure_infos.append([i, j,len(rule_branch[0].classes), setclasses]) 
             print("support:", len(rule_branch[0].classes), i, j, setclasses)
             for k, r in enumerate(rule_branch):
                 print(r.split_rule["rule"], end=" ")
@@ -117,6 +117,10 @@ def main(args):
         conditree = condition_tree(nclasses, window, labels, iteration_max=100000000)
         conditree.fit(ifeat, ival, iclas)
         compositions = conditree.conditions()
+        #ipat =  [ ["+" if d>1 else "-" if d<-1 else "=" for d in [f[i+1]-f[i] for i, _ in enumerate(f[:-1]) ]] for f in ival]
+        #compotree = composition_tree(nclasses, window, labels, iteration_max=100000000)
+        #compotree.fit(ipat, ival, iclas)
+        #compositions = compotree.composition()
         print(infos)
         for i, rules in enumerate(compositions):
             print("class", i )

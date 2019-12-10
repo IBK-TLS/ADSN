@@ -17,12 +17,12 @@ def list_of_combination(labels, len_window):
         listofcombinations += [ list(c) for c in list(itertools.product(labels, repeat=l+1)) ]
     return listofcombinations
 
-def list_of_possible_combination(features):
+def list_of_possible_combination(features, max_size=10):
     listofcombinations = []
     for f in features:
         i = len(f)//2
          
-        for w in range(len(f[i:])):
+        for w in range(min(len(f[i:]), max_size//2)):
             listofcombinations.append(f[i-w-1:i+w+2])
 
     return listofcombinations 
@@ -245,7 +245,7 @@ class composition_tree():
         gain_gini = 0
         best_comb = []
         features_with_anomaly = [f for f,c in zip(features, classes) if c != 0  ]
-        print(len(features_with_anomaly))
+        #print(len(features_with_anomaly))
         for comb in list_of_possible_combination(features_with_anomaly):
         #for comb in list_of_combination(self.labels, self.nfeat):
             split_true = [c for f, c in zip(features, classes) if islistinlist(comb,f)]
@@ -254,7 +254,7 @@ class composition_tree():
             g_false = gini_impurity(split_false, self.nclasses)
             g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
             gain = gini_orig - g
-            print(comb, gain, end="\r")
+            #print(comb, gain, end="\r")
             if gain > gain_gini :#or (gain == gain_gini and len(comb) > len(best_comb)) :
                 gain_gini = gain
                 gini_true = g_true
@@ -439,7 +439,7 @@ class pattern_tree():
         gain_gini = 0
         best_comb = []
         features_with_anomaly = [f for f,c in zip(features, classes) if c != 0  ]
-        print(len(features_with_anomaly))
+        #print(len(features_with_anomaly))
         for comb in list_of_possible_combination(features_with_anomaly):
         #for comb in list_of_combination(self.labels, self.nfeat):
             split_true = [c for f, c in zip(features, classes) if islistinlist(comb,f)]
@@ -482,7 +482,7 @@ class pattern_tree():
         while not len(self.queue) == 0 and n < self.iteration_max:
             node = self.queue.pop(0)
             node_true, node_false, gain_gini = self.split(node)
-            print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
+            #print(gain_gini, [x for i, x in enumerate(node_true.classes) if i == node_true.classes.index(x)], [x for i, x in enumerate(node_false.classes) if i == node_false.classes.index(x)])
             if len(node_true.classes)>0:
                 self.tree.append( node_true ) 
             if len(node_false.classes)>0:
@@ -634,7 +634,7 @@ class condition_tree():
         best_cond = []
         features_with_anomaly = [f for f,c in zip(features, classes) if c != 0  ]
         values_with_anomaly = [v for v,c in zip(values, classes) if c != 0  ]
-        print(len(values_with_anomaly))
+        #print(len(values_with_anomaly))
         for cond in list_of_possible_conditions(values_with_anomaly):
             split_true = [c for v, c in zip(values, classes) if checkcondition( v, cond ) ]
             split_false = [c for v, c in zip(values, classes) if not checkcondition( v, cond) ]
@@ -643,7 +643,7 @@ class condition_tree():
             g_false = gini_impurity(split_false, self.nclasses)
             g = ( g_true * (len(split_true)/N) + g_false * (len(split_false)/N) )
             gain = gini_orig - g
-            print(cond, gain, end="\r")
+            #print(cond, gain, end="\r")
             if gain > gain_gini :
                 gain_gini = gain
                 gini_true = g_true
